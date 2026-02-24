@@ -4,6 +4,9 @@ import os
 def clear():
     os.system("clear")
 
+def play_alarm():
+    os.system("afplay /System/Library/Sounds/Glass.aiff")
+
 def studyTimer(minutes):
     total_seconds = minutes * 60 #converting minutes to seconds to count down until 0
 
@@ -21,6 +24,7 @@ def studyTimer(minutes):
 
     clear()
     print("Time is up.") 
+    play_alarm()
 
 minutes = int(input("Enter time you want to study: "))
 studyTimer(minutes)
