@@ -23,8 +23,9 @@ def studyTimer(minutes):
         total_seconds -= 1
 
     clear()
-    print("Time is up.") 
     play_alarm()
+    print("Time is up.") 
+    
 
 minutes = int(input("Enter time you want to study: "))
 studyTimer(minutes)
