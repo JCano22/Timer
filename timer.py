@@ -47,8 +47,8 @@ def breakTimer(minutes):
     print("Break is up, time to get back to studying.")
 
 
-minutes = int(input("Enter time you want to study: "))
-break_min = int(input("Enter time you want in between study times: "))
+minutes = int(input("Enter the time you want to study: "))
+break_min = int(input("Enter the time you want in between study times: "))
 repeats = int(input("How many times would you like to repeat the cycle: "))
 
 for i in range(repeats):
