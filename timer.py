@@ -26,9 +26,35 @@ def studyTimer(minutes):
     play_alarm()
     print("Time is up.") 
     
+def breakTimer(minutes):
+    break_sec = minutes * 60
+
+    while(break_sec):
+        m, s = divmod(break_sec, 60)
+        timer = f"{m:02d}:{s:02d}"
+
+        clear()
+        print("Break time")
+        print("--------------")
+        print(timer)
+
+        timer.sleep(1)
+        break_sec -= 1
+        
+    clear()
+    play_alarm()
+    play_alarm()
+    play_alarm()
+    print("Break is up, time to get back to studying.")
+
 
 minutes = int(input("Enter time you want to study: "))
-studyTimer(minutes)
+break_min = int(input("Enter time you want in between study times: "))
+repeats = int(input("How many times would you like to repeat the cycle: "))
+
+for i in range(repeats):
+    studyTimer(minutes)
+    breakTimer(break_min)
         
 
 
