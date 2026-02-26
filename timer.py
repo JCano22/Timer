@@ -38,11 +38,10 @@ def breakTimer(minutes):
         print("--------------")
         print(timer)
 
-        timer.sleep(1)
+        time.sleep(1)
         break_sec -= 1
-        
+
     clear()
-    play_alarm()
     play_alarm()
     play_alarm()
     print("Break is up, time to get back to studying.")
