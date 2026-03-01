@@ -53,7 +53,8 @@ repeats = int(input("How many times would you like to repeat the cycle: "))
 
 for i in range(repeats):
     studyTimer(minutes)
-    breakTimer(break_min)
+    if i < repeats - 1:
+        breakTimer(break_min)
         
 
 
