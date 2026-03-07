@@ -7,7 +7,10 @@ def clear():
 def play_alarm():
     os.system("afplay /System/Library/Sounds/Glass.aiff")
 
-def studyTimer(minutes):
+def timer_begin():
+    os.system("afplay /System/Library/Sounds/Ping.aiff")
+
+def studyTimer(minutes, num_repeats):
     total_seconds = minutes * 60 #converting minutes to seconds to count down until 0
 
     while(total_seconds):
@@ -18,6 +21,7 @@ def studyTimer(minutes):
         print("Study time")
         print("--------------")
         print(timer)
+        print(f'\nCycles left: {num_repeats}')
 
         time.sleep(1)
         total_seconds -= 1
@@ -26,7 +30,7 @@ def studyTimer(minutes):
     play_alarm()
     print("Time is up.") 
     
-def breakTimer(minutes):
+def breakTimer(minutes, num_repeats):
     break_sec = minutes * 60
 
     while(break_sec):
@@ -37,6 +41,7 @@ def breakTimer(minutes):
         print("Break time")
         print("--------------")
         print(timer)
+        print(f'\nCycles left: {num_repeats}')
 
         time.sleep(1)
         break_sec -= 1
@@ -52,9 +57,11 @@ break_min = int(input("Enter the time you want in between study times: "))
 repeats = int(input("How many times would you like to repeat the cycle: "))
 
 for i in range(repeats):
-    studyTimer(minutes)
+    timer_begin()
+    cycles_left = repeats - i
+    studyTimer(minutes, cycles_left)
     if i < repeats - 1:
-        breakTimer(break_min)
+        breakTimer(break_min, cycles_left)
         
 
 
