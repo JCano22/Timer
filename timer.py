@@ -33,7 +33,7 @@ def studyTimer(minutes, num_repeats):
 def breakTimer(minutes, num_repeats):
     break_sec = minutes * 60
 
-    while(break_sec):
+    while break_sec <= 0:
         m, s = divmod(break_sec, 60)
         timer = f"{m:02d}:{s:02d}"
 
@@ -43,6 +43,9 @@ def breakTimer(minutes, num_repeats):
         print(timer)
         print(f'\nCycles left: {num_repeats}')
 
+        if(break_sec == 0):
+            break
+        
         time.sleep(1)
         break_sec -= 1
 
