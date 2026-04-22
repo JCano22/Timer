@@ -1,28 +1,85 @@
 import os, wx, threading
 from wx.lib.stattext import GenStaticText
 
+
+#-----------------Timer Class----------------
+class PomodoroTimer(wx.Panel):
+    def __init__(self, parent):
+        super().__init__(parent)
+
+        #creating labels for time, mode, and cycles
+        self.time_label = GenStaticText(self, label="00:00", style=wx.ALIGN_CENTER)
+        self.mode_label = GenStaticText(self, label="Study Time!", style=wx.ALIGN_CENTER)
+        self.cycles_label = GenStaticText(self, style = wx.ALIGN_CENTER)
+
+        #setting fonts for labels
+        self.time_label.SetFont(wx.Font(48, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
+        self.mode_label.SetFont(wx.Font(24, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
+        self.cycles_label.SetFont(wx.Font(24, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
+
+        #setting up the layout of the labels
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(self.mode_label, 0, wx.ALIGN_CENTER | wx.TOP, 20)
+        sizer.Add(self.time_label, 0, wx.ALIGN_CENTER | wx.TOP, 10)
+        sizer.Add(self.cycles_label, 0, wx.ALIGN_CENTER | wx.TOP, 10)
+        self.SetSizer(sizer)
+
+    #function to play alarm sound
+    def play_alarm(self):
+        os.system("afplay /System/Library/Sounds/Ping.aiff")
+
+    #function to update timer every second and switch between study and break modes
+    def on_tick(self, event):
+
+        if self.total_seconds > 0:
+            min, sec = divmod(self.total_seconds, 60)  
+            self.time_label.SetLabel(f"{min:02d}:{sec:02d}")
+            self.total_seconds -= 1
+            self.cycles_label.SetLabel(f"Cycle {self.repeats - self.cycles_left + 1} of {self.repeats}")
+            self.cycles_label.GetParent().Layout()
+
+        elif self.total_seconds == 0:
+            self.time_label.SetLabel("00:00")
+
+            if self.is_study:
+                self.mode_label.SetLabel("Break time!")
+                self.is_study = False
+                self.total_seconds = self.break_min * 60
+                t = threading.Thread(target=self.play_alarm)
+                t.start()
+            else:
+                self.mode_label.SetLabel("Study time!")
+                self.is_study = True
+                self.total_seconds = self.minutes * 60
+                self.cycles_left -= 1
+                
+                if self.cycles_left == 0:
+                    self.mode_label.SetLabel("Finished!")
+                    self.wx_timer.Stop()
+                    
+                if self.cycles_left > 0:
+                    self.cycles_label.SetLabel(f"Cycle {self.repeats - self.cycles_left + 1} of {self.repeats}")
+                    self.cycles_label.GetParent().Layout()
+
+                t = threading.Thread(target=self.play_alarm)
+                t.start()   
+    
+# --------------Setup the GUI----------------
 theApp = wx.App()
 f = wx.Frame(None, title="Study Timer", size=(400, 300))
 panel = wx.Panel(f)
 
-time_label = GenStaticText(panel, label="00:00", style=wx.ALIGN_CENTER)
-mode_label = GenStaticText(panel, label="Study Time!", style=wx.ALIGN_CENTER)
 
-time_label.SetFont(wx.Font(48, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
-mode_label.SetFont(wx.Font(24, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
-
-sizer = wx.BoxSizer(wx.VERTICAL)
-sizer.Add(mode_label, 0, wx.ALIGN_CENTER | wx.TOP, 20)
-sizer.Add(time_label, 0, wx.ALIGN_CENTER | wx.TOP, 10)
-panel.SetSizer(sizer)
-
+# --------------Timer Logic----------------
 total_seconds = 10
 is_study = True
 cycles_left = 0
 
+#function to play alarm sound
 def play_alarm():
     os.system("afplay /System/Library/Sounds/Ping.aiff")
 
+#function to update timer every second and switch between study and break modes
 def on_tick(event):
     global total_seconds, is_study, cycles_left, break_min, minutes, wx_timer
 
@@ -30,8 +87,12 @@ def on_tick(event):
         min, sec = divmod(total_seconds, 60)  
         time_label.SetLabel(f"{min:02d}:{sec:02d}")
         total_seconds -= 1
+        cycles_label.SetLabel(f"Cycle {repeats - cycles_left + 1} of {repeats}")
+        cycles_label.GetParent().Layout()
+
     elif total_seconds == 0:
         time_label.SetLabel("00:00")
+
         if is_study:
             mode_label.SetLabel("Break time!")
             is_study = False
@@ -43,14 +104,20 @@ def on_tick(event):
             is_study = True
             total_seconds = minutes * 60
             cycles_left -= 1
+            
             if cycles_left == 0:
                 mode_label.SetLabel("Finished!")
                 wx_timer.Stop()
+                
+            if cycles_left > 0:
+                cycles_label.SetLabel(f"Cycle {repeats - cycles_left + 1} of {repeats}")
+                cycles_label.GetParent().Layout()
+
             t = threading.Thread(target=play_alarm)
             t.start()
 f.Show()
 
-#setting timer
+#--------------Start the timer----------------
 wx_timer = wx.Timer(f)
 f.Bind(wx.EVT_TIMER, on_tick, wx_timer)
 
@@ -59,9 +126,13 @@ minutes = wx.GetNumberFromUser("Enter the time you want to study:", "Minutes:", 
 break_min = wx.GetNumberFromUser("Enter break time:", "Minutes:", "Study Timer", 5, 1, 60)
 repeats = wx.GetNumberFromUser("How many cycles?", "Repeats:", "Study Timer", 4, 1, 20)
 
-total_seconds = minutes * 60 #setting total_seconds to the amount of seconds in the minutes the user inputted
+#setting the initial time and cycles based on user input
+total_seconds = minutes * 60
 cycles_left = repeats #setting cycles 
+
+#start timer and play initial alarm
 wx_timer.Start(1000) #update every second
+threading.Thread(target=play_alarm).start()
 
         
 theApp.MainLoop()
