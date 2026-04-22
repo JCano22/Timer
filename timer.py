@@ -1,70 +1,68 @@
-import time
-import os
+import os, wx, threading
+from wx.lib.stattext import GenStaticText
 
-def clear():
-    os.system("clear")
+theApp = wx.App()
+f = wx.Frame(None, title="Study Timer", size=(400, 300))
+panel = wx.Panel(f)
+
+time_label = GenStaticText(panel, label="00:00", style=wx.ALIGN_CENTER)
+mode_label = GenStaticText(panel, label="Study Time!", style=wx.ALIGN_CENTER)
+
+time_label.SetFont(wx.Font(48, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
+mode_label.SetFont(wx.Font(24, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
+
+sizer = wx.BoxSizer(wx.VERTICAL)
+sizer.Add(mode_label, 0, wx.ALIGN_CENTER | wx.TOP, 20)
+sizer.Add(time_label, 0, wx.ALIGN_CENTER | wx.TOP, 10)
+panel.SetSizer(sizer)
+
+total_seconds = 10
+is_study = True
+cycles_left = 0
 
 def play_alarm():
-    os.system("afplay /System/Library/Sounds/Glass.aiff")
-
-def timer_begin():
     os.system("afplay /System/Library/Sounds/Ping.aiff")
 
-def studyTimer(minutes, num_repeats):
-    total_seconds = minutes * 60 #converting minutes to seconds to count down until 0
+def on_tick(event):
+    global total_seconds, is_study, cycles_left, break_min, minutes, wx_timer
 
-    while(total_seconds):
-        min, sec = divmod(total_seconds, 60)
-        timer = f"{min:02d}:{sec:02d}"
-
-        clear()
-        print("Study time")
-        print("--------------")
-        print(timer)
-        print(f'\nCycles left: {num_repeats}')
-
-        time.sleep(1)
+    if total_seconds > 0:
+        min, sec = divmod(total_seconds, 60)  
+        time_label.SetLabel(f"{min:02d}:{sec:02d}")
         total_seconds -= 1
+    elif total_seconds == 0:
+        time_label.SetLabel("00:00")
+        if is_study:
+            mode_label.SetLabel("Break time!")
+            is_study = False
+            total_seconds = break_min * 60
+            t = threading.Thread(target=play_alarm)
+            t.start()
+        else:
+            mode_label.SetLabel("Study time!")
+            is_study = True
+            total_seconds = minutes * 60
+            cycles_left -= 1
+            if cycles_left == 0:
+                mode_label.SetLabel("Finished!")
+                wx_timer.Stop()
+            t = threading.Thread(target=play_alarm)
+            t.start()
+f.Show()
 
-    clear()
-    play_alarm()
-    print("Time is up.") 
-    
-def breakTimer(minutes, num_repeats):
-    break_sec = minutes * 60
+#setting timer
+wx_timer = wx.Timer(f)
+f.Bind(wx.EVT_TIMER, on_tick, wx_timer)
 
-    while break_sec <= 0:
-        m, s = divmod(break_sec, 60)
-        timer = f"{m:02d}:{s:02d}"
+#user prompts for minutes, break time, and repeats
+minutes = wx.GetNumberFromUser("Enter the time you want to study:", "Minutes:", "Study Timer", 25, 1, 120)
+break_min = wx.GetNumberFromUser("Enter break time:", "Minutes:", "Study Timer", 5, 1, 60)
+repeats = wx.GetNumberFromUser("How many cycles?", "Repeats:", "Study Timer", 4, 1, 20)
 
-        clear()
-        print("Break time")
-        print("--------------")
-        print(timer)
-        print(f'\nCycles left: {num_repeats}')
+total_seconds = minutes * 60 #setting total_seconds to the amount of seconds in the minutes the user inputted
+cycles_left = repeats #setting cycles 
+wx_timer.Start(1000) #update every second
 
-        if(break_sec == 0):
-            break
         
-        time.sleep(1)
-        break_sec -= 1
-
-    clear()
-    play_alarm()
-    play_alarm()
-    print("Break is up, time to get back to studying.")
-
-
-minutes = int(input("Enter the time you want to study: "))
-break_min = int(input("Enter the time you want in between study times: "))
-repeats = int(input("How many times would you like to repeat the cycle: "))
-
-for i in range(repeats):
-    timer_begin()
-    cycles_left = repeats - i
-    studyTimer(minutes, cycles_left)
-    if i < repeats - 1:
-        breakTimer(break_min, cycles_left)
-        
-
+theApp.MainLoop()
 
