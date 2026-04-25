@@ -28,7 +28,25 @@ class PomodoroTimer(wx.Panel):
         #setting up buttons for Set Timer
         self.set_btn = wx.Button(self, label = "Set Timer")
         self.Bind(wx.EVT_BUTTON, self.on_set_timer, self.set_btn)
-        sizer.Add(self.set_btn, 0, wx.ALIGN_CENTER | wx.TOP, 10)
+
+        #setting up button for Stop Timer
+        self.stop_btn = wx.Button(self, label = "Stop Timer")
+        self.Bind(wx.EVT_BUTTON, self.on_stop_timer, self.stop_btn)
+
+        #settup up layout for buttons
+        btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        btn_sizer.Add(self.set_btn, 0, wx.RIGHT, 10)
+        btn_sizer.Add(self.stop_btn, 0)
+        sizer.Add(btn_sizer, 0, wx.ALIGN_CENTER | wx.TOP, 10)
+
+        #pause button logic
+        self.is_paused = False
+        self.pause_btn = wx.Button(self, label = "Pause Timer")
+        self.Bind(wx.EVT_BUTTON, self.on_pause_timer, self.pause_btn)
+        btn_sizer.Add(self.pause_btn, 0, wx.LEFT, 10)
+        self.pause_btn.Hide()  # Hide the pause button until the timer starts
+
+
 
     
     def on_set_timer(self, event):
@@ -41,6 +59,31 @@ class PomodoroTimer(wx.Panel):
             return  # User cancelled any of the dialogs
 
         self.start_timer(self.minutes, self.break_min, self.repeats)
+
+        # Show the pause button when the timer starts
+        self.pause_btn.Show()
+        self.Layout()  # Update the layout to show the pause button
+    
+    def on_stop_timer(self, event):
+        if hasattr(self, 'wx_timer'):
+            self.wx_timer.Stop()
+            self.time_label.SetLabel("--:--")
+            self.mode_label.SetLabel("Timer Stopped")
+            self.cycles_label.SetLabel("")
+            self.set_btn.Enable(True)  # Enabling the set timer button again
+            self.pause_btn.Hide()  # Hide the pause button when the timer is stopped
+            self.Layout()  # Update the layout to hide the pause button
+
+    #function to pause and resume timer
+    def on_pause_timer(self, event):
+        if self.is_paused:
+            self.wx_timer.Start(1000)  # Resume the timer
+            self.pause_btn.SetLabel("Pause Timer")
+            self.is_paused = False
+        else:
+            self.wx_timer.Stop()  # Pause the timer
+            self.pause_btn.SetLabel("Resume Timer")
+            self.is_paused = True
 
     #function to play alarm sound
     def play_alarm(self):
@@ -100,6 +143,7 @@ class PomodoroTimer(wx.Panel):
 
         #disabling btn
         self.set_btn.Enable(False)
+
 # -----------------Music Class----------------
 class MusicPanel(wx.Panel):
     def __init__(self, parent):
