@@ -25,6 +25,23 @@ class PomodoroTimer(wx.Panel):
         sizer.Add(self.cycles_label, 0, wx.ALIGN_CENTER | wx.TOP, 10)
         self.SetSizer(sizer)
 
+        #setting up buttons for Set Timer
+        self.set_btn = wx.Button(self, label = "Set Timer")
+        self.Bind(wx.EVT_BUTTON, self.on_set_timer, self.set_btn)
+        sizer.Add(self.set_btn, 0, wx.ALIGN_CENTER | wx.TOP, 10)
+
+    
+    def on_set_timer(self, event):
+        #user prompts for minutes, break time, and repeats
+        self.minutes = wx.GetNumberFromUser("Enter the time you want to study:", "Minutes:", "Study Timer", 25, 1, 120)
+        self.break_min = wx.GetNumberFromUser("Enter break time:", "Minutes:", "Study Timer", 5, 1, 60)
+        self.repeats = wx.GetNumberFromUser("How many cycles?", "Repeats:", "Study Timer", 3, 1, 20)
+
+        if self.minutes == -1 or self.break_min == -1 or self.repeats == -1:
+            return  # User cancelled any of the dialogs
+
+        self.start_timer(self.minutes, self.break_min, self.repeats)
+
     #function to play alarm sound
     def play_alarm(self):
         os.system("afplay /System/Library/Sounds/Ping.aiff")
@@ -57,6 +74,8 @@ class PomodoroTimer(wx.Panel):
                 if self.cycles_left == 0:
                     self.mode_label.SetLabel("Finished!")
                     self.wx_timer.Stop()
+                    #enabling the set timer button again
+                    self.set_btn.Enable(True)
                     
                 if self.cycles_left > 0:
                     self.cycles_label.SetLabel(f"Cycle {self.repeats - self.cycles_left + 1} of {self.repeats}")
@@ -78,21 +97,29 @@ class PomodoroTimer(wx.Panel):
         self.Bind(wx.EVT_TIMER, self.on_tick, self.wx_timer)
         self.wx_timer.Start(1000) #update every second
         threading.Thread(target=self.play_alarm).start()
+
+        #disabling btn
+        self.set_btn.Enable(False)
+# -----------------Music Class----------------
+class MusicPanel(wx.Panel):
+    def __init__(self, parent):
+        super().__init__(parent)
+        label = wx.StaticText(self, label="Music Player Coming Soon!", style=wx.ALIGN_CENTER)
+        label.SetFont(wx.Font(24, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
+
 # --------------Setup the GUI----------------
 theApp = wx.App()
 f = wx.Frame(None, title="Study Timer", size=(400, 300))
+notebook = wx.Notebook(f)
 
-pomodoro = PomodoroTimer(f)
+pomodoro = PomodoroTimer(notebook)
+
+# adding the pomodoro timer panel to the notebook
+notebook.AddPage(pomodoro, "Pomodoro Timer") 
+music = MusicPanel(notebook)
+notebook.AddPage(music, "Music Player")
 
 f.Show()
-
-#user prompts for minutes, break time, and repeats
-minutes = wx.GetNumberFromUser("Enter the time you want to study:", "Minutes:", "Study Timer", 25, 1, 120)
-break_min = wx.GetNumberFromUser("Enter break time:", "Minutes:", "Study Timer", 5, 1, 60)
-repeats = wx.GetNumberFromUser("How many cycles?", "Repeats:", "Study Timer", 3, 1, 20)
-
-pomodoro.start_timer(minutes, break_min, repeats)
-
-        
+       
 theApp.MainLoop()
 
