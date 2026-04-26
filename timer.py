@@ -1,4 +1,4 @@
-import os, wx, threading
+import os, wx, threading, webbrowser, sqlite3
 from wx.lib.stattext import GenStaticText
 
 
@@ -26,12 +26,14 @@ class PomodoroTimer(wx.Panel):
         self.SetSizer(sizer)
 
         #setting up buttons for Set Timer
-        self.set_btn = wx.Button(self, label = "Set Timer")
+        self.set_btn = wx.Button(self, label = "Set Timer", size = (170, 40))
+        self.set_btn.SetFont(wx.Font(18, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
         self.Bind(wx.EVT_BUTTON, self.on_set_timer, self.set_btn)
 
         #setting up button for Stop Timer
         self.stop_btn = wx.Button(self, label = "Stop Timer")
         self.Bind(wx.EVT_BUTTON, self.on_stop_timer, self.stop_btn)
+        self.stop_btn.Hide()  # Hide the stop button until the timer starts
 
         #settup up layout for buttons
         btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -45,9 +47,6 @@ class PomodoroTimer(wx.Panel):
         self.Bind(wx.EVT_BUTTON, self.on_pause_timer, self.pause_btn)
         btn_sizer.Add(self.pause_btn, 0, wx.LEFT, 10)
         self.pause_btn.Hide()  # Hide the pause button until the timer starts
-
-
-
     
     def on_set_timer(self, event):
         #user prompts for minutes, break time, and repeats
@@ -62,6 +61,7 @@ class PomodoroTimer(wx.Panel):
 
         # Show the pause button when the timer starts
         self.pause_btn.Show()
+        self.stop_btn.Show()  # Show the stop button when the timer starts
         self.Layout()  # Update the layout to show the pause button
     
     def on_stop_timer(self, event):
@@ -71,7 +71,9 @@ class PomodoroTimer(wx.Panel):
             self.mode_label.SetLabel("Timer Stopped")
             self.cycles_label.SetLabel("")
             self.set_btn.Enable(True)  # Enabling the set timer button again
-            self.pause_btn.Hide()  # Hide the pause button when the timer is stopped
+            self.pause_btn.Hide()
+            self.stop_btn.Hide()  # Hide the stop button when the timer is stopped
+            self.set_btn.Show()
             self.Layout()  # Update the layout to hide the pause button
 
     #function to pause and resume timer
@@ -143,25 +145,112 @@ class PomodoroTimer(wx.Panel):
 
         #disabling btn
         self.set_btn.Enable(False)
+        self.set_btn.Hide()
+        self.Layout()  # Update the layout to hide the set button
 
 # -----------------Music Class----------------
 class MusicPanel(wx.Panel):
     def __init__(self, parent):
         super().__init__(parent)
-        label = wx.StaticText(self, label="Music Player Coming Soon!", style=wx.ALIGN_CENTER)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        self.SetSizer(sizer)
+        label = GenStaticText(self, label="Music Player ", style=wx.ALIGN_CENTER)
         label.SetFont(wx.Font(24, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
 
+        sizer.Add(label, 0, wx.ALIGN_CENTER | wx.TOP, 20)
+
+        #buttons to open music playlist
+        self.lofi_btn = wx.Button(self, label="Lofi", size=(200, 40))
+        self.Bind(wx.EVT_BUTTON, lambda e, url = "https://www.youtube.com/results?search_query=lofi": self.play_music(url), self.lofi_btn)
+        self.classical_btn = wx.Button(self, label="Classical", size=(200, 40))
+        self.Bind(wx.EVT_BUTTON, lambda e, url = "https://www.youtube.com/results?search_query=classical+study+music": self.play_music(url), self.classical_btn)
+        self.jazz_btn = wx.Button(self, label="Jazz", size=(200, 40))
+        self.Bind(wx.EVT_BUTTON, lambda e, url ="https://www.youtube.com/results?search_query=jazz+guitar+study": self.play_music(url), self.jazz_btn)
+
+        #adding buttons to sizer
+        sizer.Add(self.lofi_btn, 0, wx.ALIGN_CENTER | wx.TOP, 20)
+        sizer.Add(self.classical_btn, 0, wx.ALIGN_CENTER | wx.TOP, 10)
+        sizer.Add(self.jazz_btn, 0, wx.ALIGN_CENTER | wx.TOP, 10)
+
+    #function to open music playlist in web browser
+    def play_music(self, url):
+        webbrowser.open(url)
+
+#-----------------To-Do List Class-------------
+class TodoPanel(wx.Panel):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.create_db() # Create the database and table if they don't exist
+
+        # setting up the layout for the to-do list
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        self.SetSizer(sizer)
+        label = GenStaticText(self, label="To-Do List", style=wx.ALIGN_CENTER)
+        label.SetFont(wx.Font(24, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
+        sizer.Add(label, 0, wx.ALIGN_CENTER | wx.TOP, 20)
+
+        # input field, add button, remove button for adding/removing tasks to the to-do list
+        input_sizer = wx.BoxSizer(wx.VERTICAL)
+        self.task_input = wx.TextCtrl(self, size=(250, 30))
+        input_sizer.Add(self.task_input, 1, wx.EXPAND |wx.RIGHT, 5)
+
+        btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.add_btn = wx.Button(self, label="Add")
+        self.remove_btn = wx.Button(self, label="Remove")
+        self.Bind(wx.EVT_BUTTON, self.on_add_task, self.add_btn)
+        self.Bind(wx.EVT_BUTTON, self.on_remove_task, self.remove_btn)
+        btn_sizer.Add(self.add_btn, 0, wx.RIGHT, 5)
+        btn_sizer.Add(self.remove_btn, 0)
+
+        input_sizer.Add(btn_sizer, 0)
+        sizer.Add(input_sizer, 0, wx.EXPAND | wx.ALL, 10)
+
+        # checklist box to display tasks in the to-do list
+        self.checklist = wx.CheckListBox(self)
+        sizer.Add(self.checklist, 1, wx.EXPAND | wx.ALL, 10)
+
+        self.load_tasks() # Load tasks from the database and display them in the checklist
+
+
+    def create_db(self):
+        self.conn = sqlite3.connect("todo.db")
+        self.cursor = self.conn.cursor()
+        self.cursor.execute("CREATE TABLE IF NOT EXISTS tasks (id INTEGER PRIMARY KEY, task TEXT)")
+        self.conn.commit()
+    
+    def on_add_task(self, event):
+        task = self.task_input.GetValue().strip()
+        if task:
+            self.cursor.execute("INSERT INTO tasks (task) VALUES (?)", (task,))
+            self.conn.commit()
+            self.checklist.Append(task)
+            self.task_input.SetValue("")  # Clear the input field after adding the task
+
+    def load_tasks(self):
+        self.cursor.execute("SELECT task FROM tasks")
+        tasks = self.cursor.fetchall()
+        for task in tasks:
+            self.checklist.Append(task[0])
+
+    def on_remove_task(self, event):
+        selected_indices = self.checklist.GetCheckedItems()
+        for index in reversed(selected_indices):  # Remove from the end to avoid index shifting
+            task = self.checklist.GetString(index)
+            self.cursor.execute("DELETE FROM tasks WHERE task = ?", (task,))
+            self.conn.commit()
+            self.checklist.Delete(index)
 # --------------Setup the GUI----------------
 theApp = wx.App()
 f = wx.Frame(None, title="Study Timer", size=(400, 300))
 notebook = wx.Notebook(f)
 
+# adding the pomodoro timer and music panel to the notebook
 pomodoro = PomodoroTimer(notebook)
-
-# adding the pomodoro timer panel to the notebook
 notebook.AddPage(pomodoro, "Pomodoro Timer") 
 music = MusicPanel(notebook)
 notebook.AddPage(music, "Music Player")
+todo = TodoPanel(notebook)
+notebook.AddPage(todo, "To-Do List")
 
 f.Show()
        
