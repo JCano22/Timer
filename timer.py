@@ -64,6 +64,7 @@ class PomodoroTimer(wx.Panel):
         self.stop_btn.Show()  # Show the stop button when the timer starts
         self.Layout()  # Update the layout to show the pause button
     
+    #function to stop timer and reset labels and buttons
     def on_stop_timer(self, event):
         if hasattr(self, 'wx_timer'):
             self.wx_timer.Stop()
@@ -105,11 +106,21 @@ class PomodoroTimer(wx.Panel):
             self.time_label.SetLabel("00:00")
 
             if self.is_study:
-                self.mode_label.SetLabel("Break time!")
-                self.is_study = False
-                self.total_seconds = self.break_min * 60
-                t = threading.Thread(target=self.play_alarm)
-                t.start()
+                if self.cycles_left == 1:
+                    self.mode_label.SetLabel("Finished!")
+                    self.wx_timer.Stop()
+                    self.set_btn.Enable(True)  # Enabling the set timer button again
+                    self.set_btn.Show()
+                    self.pause_btn.Hide()
+                    self.stop_btn.Hide()  # Hide the stop button when the timer is finished
+                    self.Layout()  # Update the layout to hide the pause button
+                else:
+                    self.mode_label.SetLabel("Break time!")
+                    self.is_study = False
+                    self.total_seconds = self.break_min * 60
+                    t = threading.Thread(target=self.play_alarm)
+                    t.start()
+                
             else:
                 self.mode_label.SetLabel("Study time!")
                 self.is_study = True
@@ -121,6 +132,9 @@ class PomodoroTimer(wx.Panel):
                     self.wx_timer.Stop()
                     #enabling the set timer button again
                     self.set_btn.Enable(True)
+                    self.pause_btn.Hide()
+                    self.stop_btn.Hide()  # Hide the stop button when the timer is finished
+                    self.set_btn.Show()
                     
                 if self.cycles_left > 0:
                     self.cycles_label.SetLabel(f"Cycle {self.repeats - self.cycles_left + 1} of {self.repeats}")
@@ -194,6 +208,7 @@ class TodoPanel(wx.Panel):
         self.task_input = wx.TextCtrl(self, size=(250, 30))
         input_sizer.Add(self.task_input, 1, wx.EXPAND |wx.RIGHT, 5)
 
+        #buttons for adding and removing tasks
         btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.add_btn = wx.Button(self, label="Add")
         self.remove_btn = wx.Button(self, label="Remove")
@@ -216,7 +231,7 @@ class TodoPanel(wx.Panel):
         self.conn = sqlite3.connect("todo.db")
         self.cursor = self.conn.cursor()
         self.cursor.execute("CREATE TABLE IF NOT EXISTS tasks (id INTEGER PRIMARY KEY, task TEXT)")
-        self.conn.commit()
+        self.conn.commit() # Commit the changes to the database after creating the table
     
     def on_add_task(self, event):
         task = self.task_input.GetValue().strip()
