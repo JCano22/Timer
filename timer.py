@@ -50,7 +50,7 @@ class PomodoroTimer(wx.Panel):
     
     def on_set_timer(self, event):
         #user prompts for minutes, break time, and repeats
-        self.minutes = wx.GetNumberFromUser("Enter the time you want to study:", "Minutes:", "Study Timer", 25, 1, 120)
+        self.minutes = wx.GetNumberFromUser("Enter the time you want to study:", "Minutes:", "Study Timer", 30, 1, 120)
         self.break_min = wx.GetNumberFromUser("Enter break time:", "Minutes:", "Study Timer", 5, 1, 60)
         self.repeats = wx.GetNumberFromUser("How many cycles?", "Repeats:", "Study Timer", 3, 1, 20)
 
