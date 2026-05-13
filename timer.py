@@ -208,14 +208,18 @@ class TodoPanel(wx.Panel):
         self.task_input = wx.TextCtrl(self, size=(250, 30))
         input_sizer.Add(self.task_input, 1, wx.EXPAND |wx.RIGHT, 5)
 
-        #buttons for adding and removing tasks
+        #buttons for adding, removing tasks, setting priority
         btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.add_btn = wx.Button(self, label="Add")
         self.remove_btn = wx.Button(self, label="Remove")
+        self.priority_btn = wx.Button(self, label="★ Priority")
         self.Bind(wx.EVT_BUTTON, self.on_add_task, self.add_btn)
         self.Bind(wx.EVT_BUTTON, self.on_remove_task, self.remove_btn)
+        self.Bind(wx.EVT_BUTTON, self.on_toggle_priority, self.priority_btn)
+
         btn_sizer.Add(self.add_btn, 0, wx.RIGHT, 5)
         btn_sizer.Add(self.remove_btn, 0)
+        btn_sizer.Add(self.priority_btn, 0, wx.LEFT, 5)
 
         input_sizer.Add(btn_sizer, 0)
         sizer.Add(input_sizer, 0, wx.EXPAND | wx.ALL, 10)
@@ -231,21 +235,27 @@ class TodoPanel(wx.Panel):
         self.conn = sqlite3.connect("todo.db")
         self.cursor = self.conn.cursor()
         self.cursor.execute("CREATE TABLE IF NOT EXISTS tasks (id INTEGER PRIMARY KEY, task TEXT)")
+        try:
+            self.cursor.execute("ALTER TABLE tasks ADD COLUMN priority TEXT DEFAULT 'normal'")
+        except:
+            pass
+
         self.conn.commit() # Commit the changes to the database after creating the table
     
     def on_add_task(self, event):
         task = self.task_input.GetValue().strip()
         if task:
-            self.cursor.execute("INSERT INTO tasks (task) VALUES (?)", (task,))
+            self.cursor.execute("INSERT INTO tasks (task, priority) VALUES (?, ?)", (task, 'normal'))
             self.conn.commit()
-            self.checklist.Append(task)
+            self.checklist.Append(f"○ {task}")
             self.task_input.SetValue("")  # Clear the input field after adding the task
 
     def load_tasks(self):
-        self.cursor.execute("SELECT task FROM tasks")
+        self.cursor.execute("SELECT task, priority FROM tasks")
         tasks = self.cursor.fetchall()
-        for task in tasks:
-            self.checklist.Append(task[0])
+        for task, priority in tasks:
+            symbol = "★" if priority == "high" else "○"
+            self.checklist.Append(f"{symbol} {task}")
 
     def on_remove_task(self, event):
         selected_indices = self.checklist.GetCheckedItems()
@@ -254,6 +264,25 @@ class TodoPanel(wx.Panel):
             self.cursor.execute("DELETE FROM tasks WHERE task = ?", (task,))
             self.conn.commit()
             self.checklist.Delete(index)
+
+    def on_toggle_priority(self, event):
+        index = self.checklist.GetSelection()
+        if index == wx.NOT_FOUND:
+            return  # nothing selected
+        
+        current = self.checklist.GetString(index)
+        task = current[2:]  # strip the symbol and space
+        
+        if current.startswith("★"):
+            self.checklist.SetString(index, f"○ {task}")
+            self.cursor.execute("UPDATE tasks SET priority = 'normal' WHERE task = ?", (task,))
+        else:
+            self.checklist.SetString(index, f"★ {task}")
+            self.cursor.execute("UPDATE tasks SET priority = 'high' WHERE task = ?", (task,))
+        
+        self.conn.commit()
+
+        
 # --------------Setup the GUI----------------
 theApp = wx.App()
 f = wx.Frame(None, title="Study Timer", size=(400, 300))
